@@ -3,7 +3,7 @@ Code and data for paper 'Prediction and mitigation of nonlocal cascading failure
 
 In order to fully reproduce the contents of the paper, the following scripts must be executed in order. Alternatively, you can use the simulation results or the trained model we provide right away.
 
-Please refer to the paper for an explanation of each term. Note that in the following code, $\langle C_\sigma (n) \sigma_N$ denoted as MCF (mean cumulative fraction).
+Please refer to the paper for an explanation of each term. Note that in the following code, $\langle C_\sigma (n) \rangle_N$ denoted as MCF (mean cumulative fraction).
 
 
 # Requirements
