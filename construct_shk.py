@@ -1,7 +1,7 @@
 import argparse
 import itertools
 from pathlib import Path
-from typing import Generator, Optional, Union
+from typing import Generator
 
 import matplotlib.figure as fig
 import matplotlib.pyplot as plt
@@ -10,19 +10,17 @@ import numpy as np
 import numpy.typing as npt
 
 """
-    Generate power grid network introduced at
-    'A random growth model for power grids and other spatially embedded infrastructure networks'
-    by P. Schultz, J. Heitzig, J. Kurths (2014)
+Generate power grid network introduced at
+'A random growth model for power grids and other spatially embedded infrastructure networks'
+by P. Schultz, J. Heitzig, J. Kurths (2014)
 """
 
-BASE_DIR = Path(__file__).parents[1].resolve()
+BASE_DIR = Path(__file__).parent.resolve()
 NETWORK_DIR = BASE_DIR / "data/edge_list"
 
-NETWORK_DIR.mkdir(parents=True, exist_ok=True)
 
-
-def get_args(options: Optional[list[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
+def get_args(options: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--initial_num_nodes", type=int, default=1, help="Number of initial nodes"
     )
@@ -68,7 +66,9 @@ class SHKNetwork:
         self.s = s
 
         # Randomly choose position of all nodes
-        self.pos = np.random.rand(self.final_num_nodes, 2).astype(np.float32)
+        self.pos = np.random.rand(self.final_num_nodes, 2).astype(
+            np.float32, copy=False
+        )
 
         # Create initial network
         self.graph = self._MST(
@@ -88,13 +88,13 @@ class SHKNetwork:
         )
 
     def plot(
-        self, fig_ax: Optional[tuple[fig.Figure, plt.Axes]] = None, save: bool = False
+        self, fig_ax: tuple[fig.Figure, plt.Axes] | None = None, file_name: Path | str | None = None
     ) -> tuple[fig.Figure, plt.Axes]:
         if fig_ax is None:
             fig, ax = plt.subplots(figsize=(10, 10))
         else:
             fig, ax = fig_ax
-        ax.axis("off")
+        plt.axis("off")
 
         nx.draw_networkx(
             self.graph,
@@ -104,17 +104,17 @@ class SHKNetwork:
             node_color="k",
             with_labels=False,
         )
-        if save:
-            fig.savefig("powergrid.png")
+        if file_name is not None:
+            fig.savefig(str(file_name), bbox_inches="tight")
 
         return fig, ax
 
-    def to_csv(self, file_path: Union[str, Path], delimiter: str = "\t") -> None:
+    def to_csv(self, file_path: str | Path, delimiter: str = "\t") -> None:
         if isinstance(file_path, str):
             file_path = Path(file_path)
         nx.write_edgelist(self.graph, file_path, delimiter=delimiter, data=False)
 
-    def to_pickle(self, file_path: Union[str, Path]) -> None:
+    def to_pickle(self, file_path: str | Path) -> None:
         if isinstance(file_path, str):
             file_path = Path(file_path)
         if file_path.suffix != ".pkl":
@@ -201,7 +201,7 @@ class SHKNetwork:
             target_edge = list(self.graph.edges())[
                 np.random.randint(self.graph.number_of_edges())
             ]
-            new_position = self.pos[target_edge, :].mean(axis=0)
+            new_position = (self.pos[target_edge[0]] + self.pos[target_edge[1]]) / 2.0
 
             # If new position is not occupied in self.pos, save it
             if new_position not in self.pos:
@@ -270,9 +270,9 @@ class SHKNetwork:
     @staticmethod
     def get_fr(
         r: float,
-        hop_dist: Union[int, npt.NDArray[np.int32]],
-        euclidean_dist: Union[float, npt.NDArray[np.float32]],
-    ) -> Union[float, npt.NDArray[np.float32]]:
+        hop_dist: int | npt.NDArray[np.int32],
+        euclidean_dist: float | npt.NDArray[np.float32],
+    ) -> float | npt.NDArray[np.float32]:
         """Calculate fr defined at eq 13"""
         return np.power(1.0 + hop_dist, r) / euclidean_dist
 
@@ -288,6 +288,9 @@ class SHKNetwork:
 
 
 def main() -> None:
+    NETWORK_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Get arguments
     args = get_args()
 
     # Create power grid
@@ -301,7 +304,7 @@ def main() -> None:
     )
 
     # Save in csv format
-    grid.to_csv(NETWORK_DIR / f"{args.ensemble_name}_{args.ensemble_idx}.csv")
+    grid.to_csv(NETWORK_DIR / f"{args.ensemble_name}_{args.ensemble_idx}.txt")
 
 
 if __name__ == "__main__":
